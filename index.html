@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Breaking News AI Picker — Links Only</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg1:#0b1220; --bg2:#0e1a2b; --grid:rgba(255,255,255,.06); }
+    html, body { height:auto; overflow-y:auto; }
+    body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .hero-bg { background:
+      radial-gradient(1000px 600px at 85% 20%, rgba(56,189,248,.08), transparent),
+      radial-gradient(900px 500px at 10% 90%, rgba(167,139,250,.10), transparent),
+      linear-gradient(180deg, var(--bg1), var(--bg2));
+      position: relative; overflow-x:hidden; }
+    .hero-bg:before { content:""; position:absolute; inset:0;
+      background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 36px 36px; mask-image: radial-gradient(80% 60% at 50% 40%, black 60%, transparent 100%); pointer-events:none; }
+    .pill { border:1px solid rgba(255,255,255,.12); }
+    .glass { background: rgba(255,255,255,.06); backdrop-filter: blur(8px); border:1px solid rgba(255,255,255,.12); }
+    .tab-btn[aria-selected="true"] { background:#0ea5e9; color:#fff; }
+    .kbd { padding:.15rem .4rem; border-radius:.375rem; border:1px solid #e5e7eb; font-size:.75rem; }
+    .source-link { color:#3b82f6; text-decoration:underline; }
+    .card:hover { transform: translateY(-2px); }
+    .truncate-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 hero-bg">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 backdrop-blur bg-slate-900/70 border-b border-white/10">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-400 to-fuchsia-500 grid place-content-center shadow">
+        <span class="font-extrabold text-slate-900">AI</span>
+      </div>
+      <div class="flex-1">
+        <h1 class="text-xl font-bold tracking-tight">Breaking News AI Picker</h1>
+        <p class="text-xs text-slate-300">Get every source links for details about a Breaking News - Past 24h.</p>
+      </div>
+      <a class="pill px-3 py-2 rounded-lg text-sm hover:bg-white/10" href="#help">Help</a>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- Search bar -->
+    <section class="glass rounded-2xl p-4 md:p-6">
+      <div class="flex flex-col md:flex-row gap-3 items-stretch">
+        <input id="query" type="text" placeholder="Try: hyderabad accident, xinjiang quake, mumbai bridge collapse" class="flex-1 bg-slate-900/60 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-cyan-400" />
+        <button id="go" class="bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold px-5 py-3 rounded-xl">Search</button>
+      </div>
+      <div class="mt-3 text-xs text-slate-300">Tips: short queries (place + event). Keyboard: <span class="kbd">Enter</span> to search, <span class="kbd">1</span>/<span class="kbd">2</span>/<span class="kbd">3</span>/<span class="kbd">4</span> tabs.</div>
+    </section>
+
+    <!-- Tabs -->
+    <section class="mt-6">
+      <div role="tablist" aria-label="Sections" class="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <button class="tab-btn pill px-4 py-2 rounded-xl" role="tab" aria-selected="true" data-tab="news">News</button>
+        <button class="tab-btn pill px-4 py-2 rounded-xl" role="tab" aria-selected="false" data-tab="visuals">Visuals</button>
+        <button class="tab-btn pill px-4 py-2 rounded-xl" role="tab" aria-selected="false" data-tab="map">Map</button>
+        <button class="tab-btn pill px-4 py-2 rounded-xl" role="tab" aria-selected="false" data-tab="timeline">Timeline</button>
+      </div>
+
+      <!-- News Panel: direct links + source tabs -->
+      <div id="panel-news" role="tabpanel" class="mt-4">
+        <h3 class="font-semibold mb-2">Top reports (past 24h)</h3>
+        <div id="newsList" class="grid md:grid-cols-2 gap-4"></div>
+        <div class="glass rounded-xl p-4 mt-4">
+          <h4 class="font-semibold">Open on sources</h4>
+          <div id="newsChips" class="mt-3 flex flex-wrap gap-2 text-sm"></div>
+          <details class="mt-3"><summary class="text-sm text-cyan-300">More links</summary>
+            <div id="newsMore" class="mt-2 flex flex-wrap gap-2 text-sm"></div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Visuals Panel: direct video/image links + source tabs -->
+      <div id="panel-visuals" role="tabpanel" class="mt-4 hidden">
+        <h3 class="font-semibold mb-2">Fresh visuals (past 24h)</h3>
+        <div id="visualGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <div class="glass rounded-xl p-4 mt-4">
+          <h4 class="font-semibold">Open on sources</h4>
+          <div id="visualChips" class="mt-3 flex flex-wrap gap-2 text-sm"></div>
+          <details class="mt-3"><summary class="text-sm text-cyan-300">More links</summary>
+            <div id="visualMore" class="mt-2 flex flex-wrap gap-2 text-sm"></div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Map Panel -->
+      <div id="panel-map" role="tabpanel" class="mt-4 hidden">
+        <div class="rounded-2xl overflow-hidden border border-white/10">
+          <iframe id="mapFrame" class="w-full h-[420px]" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+        </div>
+        <p class="mt-2 text-xs text-slate-300">Tip: Drag the map or zoom in.</p>
+      </div>
+
+      <!-- Timeline Panel: Wikipedia/related links + 24h builders -->
+      <div id="panel-timeline" role="tabpanel" class="mt-4 hidden">
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="md:col-span-2">
+            <div class="glass rounded-xl p-4">
+              <h3 class="font-semibold">Wikipedia & related</h3>
+              <ol id="wikiList" class="mt-3 list-decimal list-inside space-y-2"></ol>
+            </div>
+            <div class="glass rounded-xl p-4 mt-4">
+              <h3 class="font-semibold">Build timeline (24h searches)</h3>
+              <div id="timelineChips" class="mt-3 flex flex-wrap gap-2 text-sm"></div>
+            </div>
+          </div>
+          <aside class="md:col-span-1 glass rounded-2xl p-4">
+            <h3 class="font-semibold mb-2">Background summary</h3>
+            <div id="wikiSummary" class="text-sm text-slate-200"></div>
+            <div id="wikiLink" class="mt-2"></div>
+            <h4 class="font-semibold mt-4 mb-2">Similar incidents (24h)</h4>
+            <ul id="similarList" class="list-disc list-inside text-sm"></ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- Help -->
+    <section id="help" class="mt-10 glass rounded-2xl p-6">
+      <h2 class="text-lg font-bold mb-2">How this works (no keys)</h2>
+      <p class="text-sm text-slate-200">We pull a few <b>direct links</b> using public RSS/JSON where available (Google News RSS, Bing News RSS, YouTube feed, Reddit JSON). Everything else is source buttons below. Filters aim for <b>past 24 hours</b> and we also filter locally by time. If no visuals are returned, we show <b>Google Images fallback links</b> strictly tied to your search.</p>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="max-w-6xl mx-auto px-4 py-8 text-xs text-slate-400">
+    <div class="border-t border-white/10 pt-4 flex items-center justify-between">
+      <span>Created by Maria Manuel</span>
+      <span>© <span id="year"></span> Breaking News AI Picker</span>
+    </div>
+  </footer>
+
+  <script>
+    const $ = (s)=>document.querySelector(s); const $$=(s)=>Array.from(document.querySelectorAll(s));
+
+    // ---------- Helpers ----------
+    function showTab(name){
+      $$('.tab-btn').forEach(btn=>btn.setAttribute('aria-selected', btn.dataset.tab===name));
+      ['news','visuals','map','timeline'].forEach(id=>{
+        const el = document.getElementById('panel-'+id);
+        if(id===name) el.classList.remove('hidden'); else el.classList.add('hidden');
+      });
+    }
+    function chip(href, label){
+      const a = document.createElement('a');
+      a.href = href; a.target = '_blank'; a.rel='noopener';
+      a.className = 'pill px-3 py-2 rounded-lg hover:bg-white/10';
+      a.textContent = label; return a;
+    }
+    function within24h(dateStr){
+      const t = new Date(dateStr).getTime();
+      return !isNaN(t) && (Date.now()-t) <= 24*60*60*1000;
+    }
+    function escapeHtml(str){ return String(str||'').replace(/[&<>\"]/g, s=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s])); }
+    function phraseify(q){ return /\s/.test(q) ? '"'+q+'"' : q; }
+    function isEventQuery(q){
+      return /(accident|fire|earthquake|quake|flood|explosion|blast|collapse|landslide|storm|cyclone|hurricane|tornado|train|bus|plane|bridge|building|shooting|riot|protest|stampede|outbreak)/i.test(q);
+    }
+
+    // Generic CORS-friendly fetch (tries direct, then AllOrigins proxy, then r.jina.ai)
+    async function fetchTextCORS(url){
+      try{ const r = await fetch(url); if(r.ok) return await r.text(); }catch{}
+      try{ const r = await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(url)); if(r.ok) return await r.text(); }catch{}
+      try{ const prox = 'https://r.jina.ai/http/' + url.replace(/^https?:\/\//,''); const r = await fetch(prox); if(r.ok) return await r.text(); }catch{}
+      throw new Error('Unable to fetch '+url);
+    }
+
+    // ---------- Data sources (no keys) ----------
+    async function getGoogleNewsRSS(q){
+      const u = `https://news.google.com/rss/search?q=${encodeURIComponent(q+' when:1d')}&hl=en-IN&gl=IN&ceid=IN:en`;
+      const txt = await fetchTextCORS(u);
+      const xml = new DOMParser().parseFromString(txt,'application/xml');
+      return [...xml.querySelectorAll('item')].map(it=>({
+        title: it.querySelector('title')?.textContent||'',
+        url: it.querySelector('link')?.textContent||'',
+        source: it.querySelector('source')?.textContent||'Google News',
+        publishedAt: it.querySelector('pubDate')?.textContent||''
+      })).filter(a=> within24h(a.publishedAt));
+    }
+    async function getBingNewsRSS(q){
+      const u = `https://www.bing.com/news/search?q=${encodeURIComponent(q)}&qft=sortbydate%3d%221%22&format=RSS`;
+      const txt = await fetchTextCORS(u);
+      const xml = new DOMParser().parseFromString(txt,'application/xml');
+      return [...xml.querySelectorAll('item')].map(it=>({
+        title: it.querySelector('title')?.textContent||'',
+        url: it.querySelector('link')?.textContent||'',
+        source: it.querySelector('source')?.textContent||'Bing News',
+        publishedAt: it.querySelector('pubDate')?.textContent||''
+      })).filter(a=> within24h(a.publishedAt));
+    }
+
+    async function getYouTubeFeed(q){
+      const u = `https://www.youtube.com/feeds/videos.xml?search_query=${encodeURIComponent(q)}`;
+      const txt = await fetchTextCORS(u);
+      const xml = new DOMParser().parseFromString(txt,'application/xml');
+      return [...xml.querySelectorAll('entry')].map(e=>({
+        type:'video',
+        title: e.querySelector('title')?.textContent||'',
+        url: e.querySelector('link')?.getAttribute('href')||'',
+        publishedAt: e.querySelector('published')?.textContent||'',
+        thumb: `https://i.ytimg.com/vi/${e.querySelector('yt\\:videoId')?.textContent||''}/hqdefault.jpg`,
+        source: 'YouTube'
+      })).filter(v=> within24h(v.publishedAt));
+    }
+
+    async function getRedditImages(q){
+      const u = `https://www.reddit.com/search.json?q=${encodeURIComponent(q)}&sort=new&t=day`;
+      const r = await fetch(u); const data = await r.json();
+      const arr = (data.data?.children||[]).map(ch=>ch.data);
+      return arr.filter(p=> (p.post_hint==='image' || (p.preview&&p.preview.images&&p.preview.images[0])) )
+        .slice(0,12).map(p=>({
+          type:'image',
+          title: p.title,
+          url: 'https://www.reddit.com'+p.permalink,
+          img: (p.url_overridden_by_dest || p.preview?.images?.[0]?.source?.url||'').replace(/&amp;/g,'&'),
+          publishedAt: new Date(p.created_utc*1000).toISOString(),
+          source: 'Reddit'
+        }));
+    }
+
+    // Wikipedia helpers
+    async function getWikipediaSearch(q){
+      const searchUrl = new URL('https://en.wikipedia.org/w/api.php');
+      searchUrl.searchParams.set('origin','*');
+      searchUrl.searchParams.set('action','query');
+      searchUrl.searchParams.set('list','search');
+      searchUrl.searchParams.set('srsearch', q);
+      searchUrl.searchParams.set('format','json');
+      const sres = await fetch(searchUrl); const sdata = await sres.json();
+      const pages = sdata?.query?.search||[];
+      return pages.map(p=>({ title:p.title, snippet:p.snippet, url:`https://en.wikipedia.org/wiki/${encodeURIComponent(p.title)}` }));
+    }
+    async function getWikipediaMulti(q){
+      const [a,b,c] = await Promise.all([
+        getWikipediaSearch(q).catch(()=>[]),
+        getWikipediaSearch('Timeline of '+q).catch(()=>[]),
+        getWikipediaSearch('History of '+q).catch(()=>[])
+      ]);
+      const seen = new Set(); const all = [...a, ...b, ...c].filter(p=>{
+        const k = p.title.toLowerCase(); if(seen.has(k)) return false; seen.add(k); return true;
+      });
+      return all.slice(0,20);
+    }
+    async function getWikipediaSummary(q){
+      const s = await getWikipediaSearch(q); if(!s.length) return null;
+      const title = s[0].title;
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      try{ const r = await fetch(url); if(!r.ok) return null; const d = await r.json(); return {title:d.title, extract:d.extract, url:d.content_urls?.desktop?.page}; }catch{return null}
+    }
+
+    // ---------- Renderers ----------
+    function renderNews(list){
+      const box = $('#newsList'); box.innerHTML='';
+      if(!list.length){ box.innerHTML = '<div class="text-slate-300">No articles found in the last 24 hours.</div>'; return; }
+      const top = list.sort((a,b)=> new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,8);
+      for(const a of top){
+        const card = document.createElement('article');
+        card.className = 'card glass rounded-2xl p-4 border border-white/10 transition';
+        const d = new Date(a.publishedAt);
+        card.innerHTML = `
+          <div class="text-xs text-slate-400">${d.toLocaleString()}</div>
+          <a class="block mt-1 font-semibold source-link" href="${a.url}" target="_blank" rel="noopener">${escapeHtml(a.title)}</a>
+          <div class="mt-1 text-xs text-slate-400">Source: ${escapeHtml(a.source||'')}</div>`;
+        box.appendChild(card);
+      }
+    }
+
+    function imageLinkCard(label, href, sub='Google Images 24h'){
+      const el = document.createElement('div');
+      el.className = 'glass rounded-2xl p-4 border border-white/10';
+      el.innerHTML = `<div class="text-sm font-semibold">${escapeHtml(label)}</div>
+        <a class="source-link text-sm" href="${href}" target="_blank" rel="noopener">Open ${escapeHtml(sub)}</a>`;
+      return el;
+    }
+
+    function renderVisuals(items, q){
+      const box = $('#visualGrid'); box.innerHTML='';
+      const top = items.sort((a,b)=> new Date(b.publishedAt)-new Date(a.publishedAt)).slice(0,9);
+      for(const it of top){
+        const el = document.createElement('div'); el.className = 'glass rounded-2xl overflow-hidden border border-white/10';
+        if(it.type==='image'){
+          el.innerHTML = `<a href="${it.url}" target="_blank" rel="noopener"><img src="${it.img}" alt="${escapeHtml(it.title)}" class="w-full h-48 object-cover"/></a><div class="p-3 text-xs text-slate-300 truncate-2">${escapeHtml(it.title)}</div>`;
+        } else { // video
+          el.innerHTML = `<a href="${it.url}" target="_blank" rel="noopener"><img src="${it.thumb}" alt="${escapeHtml(it.title)}" class="w-full h-48 object-cover"/></a><div class="p-3 text-sm font-medium">${escapeHtml(it.title)}</div><div class="px-3 pb-3 text-xs text-slate-400">${escapeHtml(it.source)}</div>`;
+        }
+        box.appendChild(el);
+      }
+      if(top.length === 0){
+        if(!isEventQuery(q)){
+          box.innerHTML = '<div class="text-slate-300">No fresh visuals. Refine with an event word, e.g., "accident", "fire", "earthquake".</div>';
+          return;
+        }
+        const qp = phraseify(q);
+        const uAll = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(qp)}&tbs=qdr:d`;
+        const uX   = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(qp + ' site:x.com OR site:twitter.com')}&tbs=qdr:d`;
+        const uIG  = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(qp + ' site:instagram.com')}&tbs=qdr:d`;
+        const uFB  = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(qp + ' site:facebook.com')}&tbs=qdr:d`;
+        const uNews= `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(qp + ' (site:bbc.co.uk OR site:ndtv.com OR site:thehindu.com OR site:indiatimes.com OR site:indianexpress.com)')}&tbs=qdr:d`;
+        const uYT  = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(qp + ' site:i.ytimg.com')}&tbs=qdr:d`;
+        box.appendChild(imageLinkCard('All sources (strict phrase)', uAll));
+        box.appendChild(imageLinkCard('X / Twitter', uX));
+        box.appendChild(imageLinkCard('Instagram', uIG));
+        box.appendChild(imageLinkCard('Facebook', uFB));
+        box.appendChild(imageLinkCard('Major news sites (IN/UK)', uNews));
+        box.appendChild(imageLinkCard('YouTube thumbnails', uYT));
+      }
+    }
+
+    function tokensFromQuery(q){
+      return q.toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>=4);
+    }
+
+    async function renderTimeline(q){
+      const list = await getWikipediaMulti(q);
+      const toks = tokensFromQuery(q);
+      const rel = list.filter(p => /timeline|history/i.test(p.title) || toks.some(t => p.title.toLowerCase().includes(t)));
+      const ol = $('#wikiList'); ol.innerHTML='';
+      if(rel.length===0){
+        const li = document.createElement('li');
+        li.textContent = 'No closely-related Wikipedia pages. Try the search chips below.'; ol.appendChild(li);
+      } else {
+        for(const p of rel.slice(0,12)){
+          const li = document.createElement('li');
+          li.innerHTML = `<a class=\"source-link\" href=\"${p.url}\" target=\"_blank\" rel=\"noopener\">${escapeHtml(p.title)}</a>`;
+          ol.appendChild(li);
+        }
+      }
+      const chips = [
+        ['Google News (24h)', `https://news.google.com/search?q=${encodeURIComponent(q+' when:1d')}&hl=en-IN&gl=IN&ceid=IN:en`],
+        ['Google Web News (24h)', `https://www.google.com/search?q=${encodeURIComponent(q)}&tbm=nws&tbs=qdr:d`],
+        ['Google: "live updates"', `https://www.google.com/search?q=${encodeURIComponent(q+' "live updates"')}&tbm=nws&tbs=qdr:d`],
+        ['Google: "as it happened"', `https://www.google.com/search?q=${encodeURIComponent(q+' "as it happened"')}&tbm=nws&tbs=qdr:d`],
+        ['Wikipedia (site search)', `https://www.google.com/search?q=${encodeURIComponent('site:wikipedia.org '+phraseify(q))}`],
+        ['Timeline pages (Google)', `https://www.google.com/search?q=${encodeURIComponent('"Timeline of" '+phraseify(q))}`],
+        ['X (Live)', `https://x.com/search?q=${encodeURIComponent(q)}&f=live`],
+        ['YouTube (Upload date)', `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=CAI%253D`]
+      ];
+      const box = $('#timelineChips'); box.innerHTML='';
+      for(const [label,href] of chips){ box.appendChild(chip(href,label)); }
+    }
+
+    function renderWikiSummary(w){
+      $('#wikiSummary').innerHTML = w ? escapeHtml(w.extract||'') : 'No background found.';
+      $('#wikiLink').innerHTML = w?.url ? `<a class="source-link" href="${w.url}" target="_blank" rel="noopener">Read on Wikipedia</a>` : '';
+    }
+
+    async function renderSimilar(q){
+      const seeds = [
+        q.replace(/\bfire\b/i, 'industrial fire'),
+        q.replace(/\bearthquake\b/i, 'major earthquakes'),
+        q.replace(/\bflood\b/i, 'major floods'),
+        q.replace(/\bbridge\b/i, 'bridge collapse')
+      ];
+      const uniq = Array.from(new Set(seeds.filter(s => s && s!==q)));
+      const ul = $('#similarList'); ul.innerHTML='';
+      for(const s of uniq){
+        const li = document.createElement('li');
+        li.innerHTML = `<a class="source-link" target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent(s)}&tbs=qdr:d">${escapeHtml(s)} (24h)</a>`;
+        ul.appendChild(li);
+      }
+      if(!uniq.length){ ul.innerHTML = '<li class="text-slate-400">No similar variants.</li>'; }
+    }
+
+    // ---------- Source chips ----------
+    function setNewsChips(q){
+      const box = $('#newsChips'); box.innerHTML='';
+      const links = [
+        [`https://news.google.com/search?q=${encodeURIComponent(q+' when:1d')}&hl=en-IN&gl=IN&ceid=IN:en`, 'Google News (24h)'],
+        [`https://www.google.com/search?q=${encodeURIComponent(q)}&tbm=nws&tbs=qdr:d`, 'Google Web News (24h)'],
+        [`https://www.bing.com/news/search?q=${encodeURIComponent(q)}&qft=sortbydate%3d%221%22`, 'Bing News (Recent)'],
+        [`https://x.com/search?q=${encodeURIComponent(q)}&f=live`, 'X (Live)'],
+        [`https://www.facebook.com/search/top/?q=${encodeURIComponent(q)}`, 'Facebook']
+      ];
+      for(const [href,label] of links) box.appendChild(chip(href,label));
+      const more = $('#newsMore'); more.innerHTML='';
+      for(const [href,label] of [
+        [`https://www.reddit.com/search/?q=${encodeURIComponent(q)}`, 'Reddit'],
+        [`https://www.bbc.co.uk/search?q=${encodeURIComponent(q)}`, 'BBC'],
+        [`https://www.ndtv.com/search?searchtext=${encodeURIComponent(q)}`, 'NDTV'],
+        [`https://www.thehindu.com/search/?query=${encodeURIComponent(q)}`, 'The Hindu'],
+        [`https://timesofindia.indiatimes.com/topic/${encodeURIComponent(q)}`, 'TOI Topic'],
+        [`https://indianexpress.com/?s=${encodeURIComponent(q)}`, 'Indian Express']
+      ]) more.appendChild(chip(href,label));
+    }
+
+    function setVisualChips(q){
+      const box = $('#visualChips'); box.innerHTML='';
+      for(const [href,label] of [
+        [`https://www.google.com/search?tbm=isch&q=${encodeURIComponent(phraseify(q))}&tbs=qdr:d`, 'Google Images (24h)'],
+        [`https://www.bing.com/images/search?q=${encodeURIComponent(q)}&qft=+filterui:age-lt1440`, 'Bing Images (<24h)'],
+        [`https://www.youtube.com/results?search_query=${encodeURIComponent(q)}&sp=CAI%253D`, 'YouTube (Upload date)'],
+        [`https://www.facebook.com/search/videos/?q=${encodeURIComponent(q)}`, 'Facebook Videos'],
+        [`https://www.google.com/search?q=${encodeURIComponent('site:instagram.com '+phraseify(q))}&tbs=qdr:d`, 'Instagram via Google (24h)'],
+        [`https://x.com/search?q=${encodeURIComponent(q)}&f=live`, 'X (Live photos)']
+      ]) box.appendChild(chip(href,label));
+      const more = $('#visualMore'); more.innerHTML='';
+      for(const [href,label] of [
+        [`https://www.gettyimages.in/photos/${encodeURIComponent(q)}`, 'Getty Images'],
+        [`https://www.pexels.com/search/${encodeURIComponent(q)}/`, 'Pexels'],
+        [`https://www.flickr.com/search/?text=${encodeURIComponent(q)}&media=photos`, 'Flickr']
+      ]) more.appendChild(chip(href,label));
+    }
+
+    // ---------- Controller ----------
+    async function runSearch(){
+      const q = $('#query').value.trim(); if(!q) return;
+      showTab('news');
+      $('#newsList').innerHTML = '<div class="text-slate-300">Loading...</div>';
+      $('#visualGrid').innerHTML = '<div class="text-slate-300">Loading...</div>';
+
+      const [gn, bn, yt, rd, wikiSum] = await Promise.all([
+        getGoogleNewsRSS(q).catch(()=>[]),
+        getBingNewsRSS(q).catch(()=>[]),
+        getYouTubeFeed(q).catch(()=>[]),
+        getRedditImages(q).catch(()=>[]),
+        getWikipediaSummary(q).catch(()=>null)
+      ]);
+
+      const news = [...gn, ...bn];
+      renderNews(news);
+      setNewsChips(q);
+
+      const visuals = [...yt, ...rd];
+      renderVisuals(visuals, q);
+      setVisualChips(q);
+
+      renderMap(q);
+      await renderTimeline(q);
+      renderWikiSummary(wikiSum);
+      renderSimilar(q);
+    }
+
+    function renderMap(q){
+      const iframe = $('#mapFrame');
+      iframe.src = `https://www.google.com/maps?q=${encodeURIComponent(q)}&output=embed`;
+    }
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+      $('#year').textContent = new Date().getFullYear();
+      $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => showTab(btn.dataset.tab)));
+      document.addEventListener('keydown', (e)=>{
+        if(e.key==='1') showTab('news'); if(e.key==='2') showTab('visuals'); if(e.key==='3') showTab('map'); if(e.key==='4') showTab('timeline');
+        if(e.key==='Enter' && document.activeElement=== $('#query')) runSearch();
+      });
+      $('#go').addEventListener('click', runSearch);
+    });
+  </script>
+</body>
+</html>
+
